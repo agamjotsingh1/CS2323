@@ -1,0 +1,27 @@
+0000000000000000 <start>:
+   0: 01deceb3             xor x29, x29, x29
+   4: 01ef4f33             xor x30, x30, x30
+   8: 01ffcfb3             xor x31, x31, x31
+   c: 100002b7             lui x5, 65536
+  10: 00100e13             addi x28, x0, 1
+  14: 00900313             addi x6, x0, 9
+  18: 0062b023             sd x5, x6, 0
+  1c: 00300313             addi x6, x0, 3
+  20: 0062b423             sd x5, x6, 8
+  24: 0002b383             ld x7, x5, 0
+  28: 0082b403             ld x8, x5, 8
+
+000000000000002c <Loop>:
+  2c: 02040263             beq x8, x0, 36 <Loop_Exit>
+  30: 01c47fb3             and x31, x8, x28
+  34: 01cf8463             beq x31, x28, 8 <Shift>
+  38: 00000663             beq x0, x0, 12 <Shift_Exit>
+
+000000000000003c <Shift>:
+  3c: 01e39fb3             sll x31, x7, x30
+  40: 01fe8eb3             add x29, x29, x31
+
+0000000000000044 <Shift_Exit>:
+  44: 001f0f13             addi x30, x30, 1
+  48: 00145413             srli x8, x8, 1
+  4c: fe0000e3             beq x0, x0, -32 <Loop>
