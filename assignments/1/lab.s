@@ -9,9 +9,9 @@
         li x5, 0x10000000 # memory location of numbers
 
         # --- debug ---
-        li x6, -9
+        li x6, 3
         sd x6, 0(x5) 
-        li x6, -3
+        li x6, 9
         sd x6, 8(x5) 
         # --- debug ---
 
@@ -19,13 +19,27 @@
         ld x7, 0(x5)
         ld x8, 8(x5)
 
-    # check if x8 is negative or not
-    xor x5, x5, x5
-    li x5, 63
-    srl x5, x8, x5
+    xor x5, x8, x7
+    li x6, 63
+    srl x5, x5, x6 # x5 is 1 when result is -ve, 0 if +ve
 
-    beq x5, x0, Loop # straightaway jump to loop if x8 is positive
-    sub x8, x0, x8 # Negate x8 for lesser iterations
+    # We make both the numbers positive
+    # x5 stores whether the result is negative or positive
+    # We also keep x8 with the lesser magnitude to make it faster
+    bge x8, x0, Pos # directly jump to pos if x8 is positive
+    sub x8, x0, x8
+
+    Pos:
+        bge x7, x0, Swap # directly jump to swap if x7 is positive
+        sub x7, x0, x7
+
+    Swap:
+        bge x7, x8, Loop # directly jump to loop if x7 >= x8
+
+        # Swapping x7 and x8 with XOR if x7 < x8
+        xor x7, x7, x8
+        xor x8, x7, x8
+        xor x7, x7, x8
 
     Loop:
         beq x8, x0, Exit # exit the loop if x8 is zero
@@ -47,7 +61,9 @@
         beq x0, x0, Loop # Infinite Loop
 
     Exit:
-        beq x5, x0, Store # x5 stores whether x8 was negative
+        # x5 stores whether the result is -ve or +ve
+        # is x5 is zero, result is +ve then store directly
+        beq x5, x0, Store 
         sub x29, x0, x29 # Negate the output otherwise
 
     Store:
