@@ -9,7 +9,7 @@
         li x5, 0x10000000 # memory location of numbers
 
         # --- debug ---
-        li x6, 3
+        li x6, -7
         sd x6, 0(x5) 
         li x6, 9
         sd x6, 8(x5) 
@@ -31,7 +31,7 @@
 
     Pos:
         bge x7, x0, Swap # directly jump to swap if x7 is positive
-        sub x7, x0, x7
+        sub x7, x0, x7 # make x7 positive
 
     Swap:
         bge x7, x8, Loop # directly jump to loop if x7 >= x8
