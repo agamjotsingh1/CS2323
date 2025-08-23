@@ -1,0 +1,37 @@
+0000000000000000 <start>:
+   0: 00005537             lui x10, 5
+   4: 6d050513             addi x10, x10, 1744
+   8: 000015b7             lui x11, 1
+   c: d0658593             addi x11, x11, -762
+  10: 008000ef             jal x1, 8 <gcd>
+
+0000000000000014 <terminate>:
+  14: 00000063             beq x0, x0, 0 <terminate>
+
+0000000000000018 <loop_odd>:
+  18: 00b572b3             and x5, x10, x11
+  1c: 0012e293             ori x5, x5, 1
+  20: 00029a63             bne x5, x0, 20 <loop_gcd>
+  24: 00155513             srli x10, x10, 1
+  28: 0015d593             srli x11, x11, 1
+  2c: 001f8f93             addi x31, x31, 1
+  30: fe0004e3             beq x0, x0, -24 <loop_odd>
+
+0000000000000034 <loop_gcd>:
+  34: 02050263             beq x10, x0, 36 <exit_loop_gcd>
+  38: 00b55863             bge x10, x11, 16 <continue>
+  3c: 00b54533             xor x10, x10, x11
+  40: 00b545b3             xor x11, x10, x11
+  44: 00b5c533             xor x10, x11, x11
+
+0000000000000048 <continue>:
+  48: 40b50533             sub x10, x10, x11
+
+000000000000004c <loop_strip_zeroes>:
+  4c: 00157293             andi x5, x10, 1
+  50: fe0292e3             bne x5, x0, -28 <loop_gcd>
+  54: 00155513             srli x10, x10, 1
+
+0000000000000058 <exit_loop_gcd>:
+  58: 00859533             sll x10, x11, x8
+  5c: 00008067             jalr x0, x1, 0
