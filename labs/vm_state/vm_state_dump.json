@@ -1,14 +1,14 @@
 {
-    "program_counter": "0x0000000c",
-    "current_line": 10,
-    "current_instruction": "0x00008067",
-    "disassembly_line_number": 7,
-    "cycle_count": 52,
-    "instructions_retired": 52,
+    "program_counter": "0x00000090",
+    "current_line": 85,
+    "current_instruction": "0x06048263",
+    "disassembly_line_number": 56,
+    "cycle_count": 138,
+    "instructions_retired": 138,
     "cpi": 0,
     "ipc": 0,
     "stall_cycles": 0,
     "branch_mispredictions": 0,
-    "breakpoints": [],
-    "output_status": "VM_STEP_COMPLETED"
+    "breakpoints": [85],
+    "output_status": "VM_BREAKPOINT_HIT"
 }

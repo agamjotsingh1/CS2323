@@ -1,36 +1,56 @@
 0000000000000000 <start>:
-   0: 06000513             addi x10, x0, 96
-   4: 00900593             addi x11, x0, 9
-   8: 008000ef             jal x1, 8 <gcd>
+   0: 100001b7             lui x3, 65536
+   4: 0001b483             ld x9, x3, 0
+   8: 00818913             addi x18, x3, 8
+   c: 20018993             addi x19, x3, 512
 
-000000000000000c <terminate>:
-   c: 0000006f             jal x0, 0 <terminate>
+0000000000000010 <start>:
+  10: 00093503             ld x10, x18, 0
+  14: 00893583             ld x11, x18, 8
+  18: 01c000ef             jal x1, 28 <gcd>
+  1c: 00a9b023             sd x19, x10, 0
+  20: 01090913             addi x18, x18, 16
+  24: 00898993             addi x19, x19, 8
+  28: fff48493             addi x9, x9, -1
+  2c: 06048263             beq x9, x0, 100 <end>
+  30: fe1ff06f             jal x0, -32 <start>
 
-0000000000000010 <loop_odd>:
-  10: 00b562b3             or x5, x10, x11
-  14: 0012f293             andi x5, x5, 1
-  18: 00029a63             bne x5, x0, 20 <loop_gcd>
-  1c: 00155513             srli x10, x10, 1
-  20: 0015d593             srli x11, x11, 1
-  24: 001f8f93             addi x31, x31, 1
-  28: fe0004e3             beq x0, x0, -24 <loop_odd>
+0000000000000034 <gcd>:
+  34: 04050663             beq x10, x0, 76 <exit_null_loop_gcd>
+  38: 04058463             beq x11, x0, 72 <exit_null_loop_gcd>
 
-000000000000002c <loop_gcd>:
-  2c: 02050463             beq x10, x0, 40 <exit_loop_gcd>
-  30: 00b55863             bge x10, x11, 16 <continue>
-  34: 00b54533             xor x10, x10, x11
-  38: 00b545b3             xor x11, x10, x11
-  3c: 00b54533             xor x10, x10, x11
+000000000000003c <loop_odd>:
+  3c: 00b562b3             or x5, x10, x11
+  40: 0012f293             andi x5, x5, 1
+  44: 00029a63             bne x5, x0, 20 <loop_gcd>
+  48: 00155513             srli x10, x10, 1
+  4c: 0015d593             srli x11, x11, 1
+  50: 001f8f93             addi x31, x31, 1
+  54: fe0004e3             beq x0, x0, -24 <loop_odd>
 
-0000000000000040 <continue>:
-  40: 40b50533             sub x10, x10, x11
+0000000000000058 <loop_gcd>:
+  58: 02050863             beq x10, x0, 48 <exit_loop_gcd>
+  5c: 00b57863             bgeu x10, x11, 16 <continue>
+  60: 00b54533             xor x10, x10, x11
+  64: 00b545b3             xor x11, x10, x11
+  68: 00b54533             xor x10, x10, x11
 
-0000000000000044 <loop_strip_zeroes>:
-  44: 00157293             andi x5, x10, 1
-  48: fe0292e3             bne x5, x0, -28 <loop_gcd>
-  4c: 00155513             srli x10, x10, 1
-  50: fddff06f             jal x0, -36 <loop_gcd>
+000000000000006c <continue>:
+  6c: 40b50533             sub x10, x10, x11
 
-0000000000000054 <exit_loop_gcd>:
-  54: 01f59533             sll x10, x11, x31
-  58: 00008067             jalr x0, x1, 0
+0000000000000070 <loop_strip_zeroes>:
+  70: 00157293             andi x5, x10, 1
+  74: fe0292e3             bne x5, x0, -28 <loop_gcd>
+  78: 00155513             srli x10, x10, 1
+  7c: fddff06f             jal x0, -36 <loop_gcd>
+
+0000000000000080 <exit_null_loop_gcd>:
+  80: 00a54533             xor x10, x10, x10
+  84: 00008067             jalr x0, x1, 0
+
+0000000000000088 <exit_loop_gcd>:
+  88: 01f59533             sll x10, x11, x31
+  8c: 00008067             jalr x0, x1, 0
+
+0000000000000090 <end>:
+  90: 0000006f             jal x0, 0 <end>
