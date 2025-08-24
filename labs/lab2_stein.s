@@ -2,23 +2,23 @@
 # Stein's algorithm (a.k.a. Binary GCD)
 .section .text
 
-li a0, 22224
-li a1, 3334
+li a0, 96
+li a1, 9
 jal x1, gcd
 
 terminate:
-   beq x0, x0, terminate
+   jal x0, terminate
 
 gcd:
     # Divide both the algorithms till you get odd
     # gcd(2a, 2b) = 2*gcd(a, b)
     loop_odd:
-        and t0, a0, a1
-        ori t0, t0, 1
+        or t0, a0, a1
+        andi t0, t0, 1
         bne t0, x0, loop_gcd
         srli a0, a0, 1
         srli a1, a1, 1
-        addi t6, t6, 1 # s0 will store number of shifts
+        addi t6, t6, 1 # t6 will store number of shifts
         beq x0, x0, loop_odd
 
     loop_gcd:
@@ -28,7 +28,7 @@ gcd:
         # Swapping a0 and a1 with XOR if a0 < a1
         xor a0, a0, a1
         xor a1, a0, a1
-        xor a0, a1, a1
+        xor a0, a0, a1
         continue:
 
         sub a0, a0, a1
@@ -40,8 +40,10 @@ gcd:
             bne t0, x0, loop_gcd
             srli a0, a0, 1
 
+        jal x0, loop_gcd
+
     exit_loop_gcd:
         # shift the output back
         # because gcd(2a, 2b) = 2*gcd(a, b)
-        sll a0, a1, s0 
+        sll a0, a1, t6 
         ret
