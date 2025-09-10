@@ -1,6 +1,7 @@
 .data
 #.word 0b00111111000000000000000000000000, 5
-.word 0b00111111001100110011001100110011, 10
+#.word 0b00111111001100110011001100110011, 20
+.word 0b00111111001100110011001100110011, -1
 
 .text
 
@@ -8,7 +9,7 @@ lui x3, 0x10000
 ld t0, 0(x3)
 fmv.w.x fa0, t0
 ld a0, 4(x3)
-jal x1, ln
+jal x1, exp
 add x0, x0, x0
 
 # fact(a0)
@@ -17,6 +18,7 @@ add x0, x0, x0
 # OUTPUTS
 # a0 := a0! (INT64)
 fact:
+    blt a0, x0, nan_error
     li t0, 1
 
     fact_loop:
@@ -57,6 +59,7 @@ pow:
 # OUTPUTS
 # fa0 := exp(fa0) till a0 terms (FP32)
 exp:
+    bge x0, a0, nan_error # no of terms <= 0 then error
     # save saved registers (s0, fs0, fs1, fs2)
 
     # PLEASE NOTE THIS IS NOT CONFIRMED
@@ -121,6 +124,7 @@ exp:
 
         ret
 
+    
 # cos(fa0, a0)
 # INPUTS
 # fa0 := input (FP32)
@@ -128,6 +132,8 @@ exp:
 # OUTPUTS
 # fa0 := cos(fa0) till a0 terms (FP32)
 cos:
+    bge x0, a0, nan_error # no of terms <= 0 then error
+
     # save saved registers (s0, s1, fs0, fs1)
     # NOTE := Although we only need 24 bytes of stack
     # memory, the stack pointer should be 16 bit aligned
@@ -212,6 +218,8 @@ cos:
 # OUTPUTS
 # fa0 := sin(fa0) till a0 terms (FP32)
 sin:
+    bge x0, a0, nan_error # no of terms <= 0 then error
+
     # save saved registers (s0, s1, fs0, fs1)
     # NOTE := Although we only need 24 bytes of stack
     # memory, the stack pointer should be 16 bit aligned
@@ -301,6 +309,11 @@ sin:
 # OUTPUTS
 # fa0 := ln(fa0) till a0 terms (FP32)
 ln:
+    bge x0, a0, nan_error # no of terms <= 0 then error
+    fcvt.s.w ft0, x0
+    fle.s t0, fa0, ft0 # domain of input is > 0
+    bne t0, x0, nan_error
+
     # save saved registers (s0, s1, fs0, fs1)
     # NOTE := Although we only need 20 bytes of stack
     # memory, the stack pointer should be 16 bit aligned
@@ -312,8 +325,8 @@ ln:
 
     # NOTE := we have taylor series for only ln(1 + x)
     # so we substitute x = <input> - 1 to get ln(<input>)
-    li t0, -2
-    fmv.w.x ft1, t0 # ft1 contains -1
+    li t0, -1
+    fcvt.s.w ft1, t0 # ft1 contains -1
     fadd.s fa0, fa0, ft1
 
     # ln starts with power 1
@@ -382,3 +395,78 @@ ln:
         addi sp, sp, 32
 
         ret
+
+# reciprocal(fa0, a0)
+# INPUTS
+# fa0 := input (FP32)
+# a0 := number of terms (INT64)
+# OUTPUTS
+# fa0 := 1/(fa0) till a0 terms (FP32)
+reciprocal:
+    bge x0, a0, nan_error # no of terms <= 0 then error
+    fcvt.s.w ft0, x0
+    feq.s t0, fa0, ft0 # domain of input is R - {0}
+    bne t0, x0, nan_error
+
+    # save saved registers (s0, fs0)
+    # NOTE := Although we only need 12 bytes of stack
+    # memory, the stack pointer should be 16 byte memory aligned
+    # So, we subtract it with 16
+    addi sp, sp, -16
+    sd s0, 4(sp)
+    fsw fs0, 0(sp)
+
+    # NOTE := we have taylor series for only 1/(1 - x)
+    # so we substitute x = 1 - <input> to get 1/(<input>)
+    li t0, 1
+    fcvt.s.w ft1, t0 # ft1 contains -1
+    fsub.s fa0, ft1, fa0
+
+    li s0, 1 # upward counter for 'n' in taylor series
+    # fs0 initialized to 1 which is first term
+    fcvt.s.l fs0, s0 # fs0 := result 
+
+    # decrease a0 by 1 as we already considered first term
+    addi a0, a0, -1 
+
+    reciprocal_loop:
+        bge x0, a0, reciprocal_ret
+
+        # saving registers (fa0, a0, x1)
+        addi sp, sp, -32
+        fsw fa0, 16(sp)
+        sd a0, 8(sp)
+        sd x1, 0(sp)
+
+        # Calculating pow(fa0, s0)
+        # Stored in fa0
+        mv a0, s0
+        # Input is already in fa0
+        jal x1, pow
+        fadd.s fs0, fs0, fa0
+
+        # loading back registers (fa0, a0, x1)
+        ld x1, 0(sp)
+        ld a0, 8(sp)
+        flw fa0, 16(sp)
+        addi sp, sp, 32
+
+        addi a0, a0, -1
+        addi s0, s0, 1 # increment 'n' by one
+        jal x0, reciprocal_loop 
+
+    reciprocal_ret:
+        fmv.w.x ft1, x0
+        fadd.s fa0, ft1, fs0 # move fs0 to fa0 by adding zero
+
+        # load back the saved registers
+        flw fs0, 0(sp)
+        ld s0, 4(sp)
+        addi sp, sp, 16
+
+        ret
+
+nan_error:
+    li t0, -1 # 0xffffffff = Nan in floating point
+    fmv.w.x fa0, t0
+    ret
