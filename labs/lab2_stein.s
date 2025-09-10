@@ -1,7 +1,8 @@
 # Reference: https://en.algorithmica.org/hpc/algorithms/gcd/
 # Stein's algorithm (a.k.a. Binary GCD)
 .data
-.dword 3, 12, 3, 125, 50, 32, 16
+#.dword 3, 12, 3, 125, 50, 32, 16
+.dword 1, 2273351831, 798618983
 
 .text
 # Memory location 0x10000000 for storage
