@@ -1,14 +1,14 @@
 {
-    "program_counter": "0x0000005c",
-    "current_line": 68,
-    "current_instruction": "0xff010113",
-    "disassembly_line_number": 39,
-    "cycle_count": 6,
-    "instructions_retired": 6,
+    "program_counter": "0x00000000",
+    "current_line": 7,
+    "current_instruction": "0x00000000",
+    "disassembly_line_number": 2,
+    "cycle_count": 0,
+    "instructions_retired": 0,
     "cpi": 0,
     "ipc": 0,
     "stall_cycles": 0,
     "branch_mispredictions": 0,
     "breakpoints": [12],
-    "output_status": "VM_STEP_COMPLETED"
+    "output_status": "VM_PROGRAM_LOADED"
 }

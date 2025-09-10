@@ -1,6 +1,6 @@
 .data
 #.word 0b00111111000000000000000000000000, 5
-.word 0b00111111001100110011001100110011, 5
+.word 0b00111111001100110011001100110011, 10
 
 .text
 
@@ -8,7 +8,7 @@ lui x3, 0x10000
 ld t0, 0(x3)
 fmv.w.x fa0, t0
 ld a0, 4(x3)
-jal x1, exp
+jal x1, ln
 add x0, x0, x0
 
 # fact(a0)
@@ -138,17 +138,19 @@ cos:
     fsw fs1, 4(sp)
     fsw fs0, 0(sp)
 
-    li s0, 1 # upward counter for 'n' in taylor series
+    # cosine starts with index 2
+    # after the first term = 1
+    li s0, 2 # upward counter for 'n' in taylor series
     # cosine has alternating -1 and 1
     # it is just convenient to have a register for it
     li s1, 1 
-    fcvt.s.l fs0, s0 # fs0 := result
+    fcvt.s.l fs0, s1 # fs0 := result (first term = 1)
 
     # decrease a0 by 1 as we already considered first term
     addi a0, a0, -1 
 
     cos_loop:
-        bge x0, a0, exp_ret
+        bge x0, a0, cos_ret
 
         # saving registers (fa0, a0, x1)
         addi sp, sp, -32
@@ -174,7 +176,7 @@ cos:
         # -2 = 0b11111.....1110
         # xor with -2 makes it switch from 1 to -1 and -1 to 1
         xori s1, s1, -2
-        fcvt.w.s ft0, s1
+        fcvt.s.w ft0, s1
         fmul.s fa0, fa0, ft0
         fadd.s fs0, fs0, fa0
 
@@ -199,6 +201,184 @@ cos:
         flw fs1, 4(sp)
         ld s0, 8(sp)
         ld s1, 16(sp)
+        addi sp, sp, 32
+
+        ret
+
+# sin(fa0, a0)
+# INPUTS
+# fa0 := input (FP32)
+# a0 := number of terms (INT64)
+# OUTPUTS
+# fa0 := sin(fa0) till a0 terms (FP32)
+sin:
+    # save saved registers (s0, s1, fs0, fs1)
+    # NOTE := Although we only need 24 bytes of stack
+    # memory, the stack pointer should be 16 bit aligned
+    # So, we subtract it with 32
+    addi sp, sp, -32
+    sd s1, 16(sp)
+    sd s0, 8(sp)
+    fsw fs1, 4(sp)
+    fsw fs0, 0(sp)
+
+    # sine starts with power 1
+    # but second term starts with power 3
+    # as we are already considering first term
+    # for initiliazation, s0 starts with 3
+    li s0, 3 # upward counter for 'n' in taylor series
+    # sine has alternating -1 and 1
+    # it is just convenient to have a register for it
+    li s1, 1 
+    # fs0 := result (first term = <input> or x)
+    fmv.w.x ft1, x0
+    fadd.s fs0, ft1, fa0 # move fa0 to fs0 by adding zero
+
+    # decrease a0 by 1 as we already considered first term
+    addi a0, a0, -1 
+
+    sin_loop:
+        bge x0, a0, sin_ret
+
+        # saving registers (fa0, a0, x1)
+        addi sp, sp, -32
+        fsw fa0, 16(sp)
+        sd a0, 8(sp)
+        sd x1, 0(sp)
+
+        # Calculating fact(s0)
+        # a0 = s0
+        # Stored in a0
+        mv a0, s0
+        jal x1, fact
+        fcvt.s.l fs1, a0 # fs1 contains factorial
+
+        # Calculating pow(fa0, s0)
+        # Stored in fa0
+        mv a0, s0
+        # Input is already in fa0
+        jal x1, pow
+        fdiv.s fa0, fa0, fs1
+
+        # switching the sign of s1
+        # -2 = 0b11111.....1110
+        # xor with -2 makes it switch from 1 to -1 and -1 to 1
+        xori s1, s1, -2
+        fcvt.s.w ft0, s1
+        fmul.s fa0, fa0, ft0
+        fadd.s fs0, fs0, fa0
+
+        # loading back registers (fa0, a0, x1)
+        ld x1, 0(sp)
+        ld a0, 8(sp)
+        flw fa0, 16(sp)
+        addi sp, sp, 32
+
+        addi a0, a0, -1
+        # increment 'n' by 2
+        # as the sin taylor series contains odd powers only
+        # (s0 started with 1)
+        addi s0, s0, 2 
+        jal x0, sin_loop 
+
+    sin_ret:
+        fmv.w.x ft1, x0
+        fadd.s fa0, ft1, fs0 # move fs0 to fa0 by adding zero
+
+        # load back the saved registers
+        flw fs0, 0(sp)
+        flw fs1, 4(sp)
+        ld s0, 8(sp)
+        ld s1, 16(sp)
+        addi sp, sp, 32
+
+        ret
+
+# ln(fa0, a0)
+# INPUTS
+# fa0 := input (FP32)
+# a0 := number of terms (INT64)
+# OUTPUTS
+# fa0 := ln(fa0) till a0 terms (FP32)
+ln:
+    # save saved registers (s0, s1, fs0, fs1)
+    # NOTE := Although we only need 20 bytes of stack
+    # memory, the stack pointer should be 16 bit aligned
+    # So, we subtract it with 32
+    addi sp, sp, -32
+    sd s1, 12(sp)
+    sd s0, 4(sp)
+    fsw fs0, 0(sp)
+
+    # NOTE := we have taylor series for only ln(1 + x)
+    # so we substitute x = <input> - 1 to get ln(<input>)
+    li t0, -2
+    fmv.w.x ft1, t0 # ft1 contains -1
+    fadd.s fa0, fa0, ft1
+
+    # ln starts with power 1
+    # but second term starts with power 2
+    # as we are already considering first term
+    # for initiliazation, s0 starts with 2
+    li s0, 2 # upward counter for 'n' in taylor series
+    # ln has alternating -1 and 1
+    # it is just convenient to have a register for it
+    li s1, 1 
+    # fs0 := result (first term = <input> or x)
+    fmv.w.x ft1, x0
+    fadd.s fs0, ft1, fa0 # move fa0 to fs0 by adding zero
+
+    # decrease a0 by 1 as we already considered first term
+    addi a0, a0, -1 
+
+    ln_loop:
+        bge x0, a0, ln_ret
+
+        # saving registers (fa0, a0, x1)
+        addi sp, sp, -32
+        fsw fa0, 16(sp)
+        sd a0, 8(sp)
+        sd x1, 0(sp)
+
+        # Calculating pow(fa0, s0)
+        # Stored in fa0
+        mv a0, s0
+        # Input is already in fa0
+        jal x1, pow
+
+        # Divide by index (s0)
+        fcvt.s.w ft0, s0
+        fdiv.s fa0, fa0, ft0
+
+        # switching the sign of s1
+        # -2 = 0b11111.....1110
+        # xor with -2 makes it switch from 1 to -1 and -1 to 1
+        xori s1, s1, -2
+        fcvt.s.w ft0, s1
+        fmul.s fa0, fa0, ft0
+        fadd.s fs0, fs0, fa0
+
+        # loading back registers (fa0, a0, x1)
+        ld x1, 0(sp)
+        ld a0, 8(sp)
+        flw fa0, 16(sp)
+        addi sp, sp, 32
+
+        addi a0, a0, -1
+        # increment 'n' by 2
+        # as the sin taylor series contains odd powers only
+        # (s0 started with 1)
+        addi s0, s0, 1
+        jal x0, ln_loop 
+
+    ln_ret:
+        fmv.w.x ft1, x0
+        fadd.s fa0, ft1, fs0 # move fs0 to fa0 by adding zero
+
+        # load back the saved registers
+        flw fs0, 0(sp)
+        ld s0, 4(sp)
+        ld s1, 12(sp)
         addi sp, sp, 32
 
         ret

@@ -3,7 +3,7 @@
     4: 0001b283             ld x5, x3, 0
     8: f0028553             fmv.w.x f10, x5 rm=7
     c: 0041b503             ld x10, x3, 4
-   10: 048000ef             jal x1, 72 <exp>
+   10: 208000ef             jal x1, 520 <ln>
    14: 00000033             add x0, x0, x0
 
 0000000000000018 <fact>:
@@ -35,7 +35,7 @@
    54: 00008067             jalr x0, x1, 0
 
 0000000000000058 <exp>:
-   58: ff010113             addi x2, x2, -16
+   58: fe010113             addi x2, x2, -32
    5c: 00813423             sd x2, x8, 8
    60: 00912227             fsw x2, f9, 4
    64: 00812027             fsw x2, f8, 0
@@ -79,39 +79,132 @@
    e4: 00813423             sd x2, x8, 8
    e8: 00912227             fsw x2, f9, 4
    ec: 00812027             fsw x2, f8, 0
-   f0: 00100413             addi x8, x0, 1
-   f4: d0247453             fcvt.s.l f8, x8 rm=7
-   f8: fff50513             addi x10, x10, -1
+   f0: 00200413             addi x8, x0, 2
+   f4: 00100493             addi x9, x0, 1
+   f8: d024f453             fcvt.s.l f8, x9 rm=7
+   fc: fff50513             addi x10, x10, -1
 
-00000000000000fc <cos_loop>:
-   fc: fca052e3             bge x0, x10, -60 <exp_ret>
-  100: fe010113             addi x2, x2, -32
-  104: 00a12827             fsw x2, f10, 16
-  108: 00a13423             sd x2, x10, 8
-  10c: 00113023             sd x2, x1, 0
-  110: 00040533             add x10, x8, x0
-  114: f05ff0ef             jal x1, -252 <fact>
-  118: d02574d3             fcvt.s.l f9, x10 rm=7
-  11c: 00040533             add x10, x8, x0
-  120: f15ff0ef             jal x1, -236 <pow>
-  124: 18957553             fdiv.s f10, f10, f9 rm=7
-  128: fff00293             addi x5, x0, -1
-  12c: 10057553             fmul.s f10, f10, f0 rm=7
-  130: 00a47453             fadd.s f8, f8, f10 rm=7
-  134: 00013083             ld x1, x2, 0
-  138: 00813503             ld x10, x2, 8
-  13c: 01012507             flw f10, x2, 16
-  140: 02010113             addi x2, x2, 32
-  144: fff50513             addi x10, x10, -1
-  148: 00240413             addi x8, x8, 2
-  14c: fb1ff06f             jal x0, -80 <cos_loop>
+0000000000000100 <cos_loop>:
+  100: 04a05c63             bge x0, x10, 88 <cos_ret>
+  104: fe010113             addi x2, x2, -32
+  108: 00a12827             fsw x2, f10, 16
+  10c: 00a13423             sd x2, x10, 8
+  110: 00113023             sd x2, x1, 0
+  114: 00040533             add x10, x8, x0
+  118: f01ff0ef             jal x1, -256 <fact>
+  11c: d02574d3             fcvt.s.l f9, x10 rm=7
+  120: 00040533             add x10, x8, x0
+  124: f11ff0ef             jal x1, -240 <pow>
+  128: 18957553             fdiv.s f10, f10, f9 rm=7
+  12c: ffe4c493             xori x9, x9, -2
+  130: d004f053             fcvt.s.w f0, x9 rm=7
+  134: 10057553             fmul.s f10, f10, f0 rm=7
+  138: 00a47453             fadd.s f8, f8, f10 rm=7
+  13c: 00013083             ld x1, x2, 0
+  140: 00813503             ld x10, x2, 8
+  144: 01012507             flw f10, x2, 16
+  148: 02010113             addi x2, x2, 32
+  14c: fff50513             addi x10, x10, -1
+  150: 00240413             addi x8, x8, 2
+  154: fadff06f             jal x0, -84 <cos_loop>
 
-0000000000000150 <cos_ret>:
-  150: f00000d3             fmv.w.x f1, x0 rm=7
-  154: 0080f553             fadd.s f10, f1, f8 rm=7
-  158: 00012407             flw f8, x2, 0
-  15c: 00412487             flw f9, x2, 4
-  160: 00813403             ld x8, x2, 8
-  164: 01013483             ld x9, x2, 16
-  168: 02010113             addi x2, x2, 32
-  16c: 00008067             jalr x0, x1, 0
+0000000000000158 <cos_ret>:
+  158: f00000d3             fmv.w.x f1, x0 rm=7
+  15c: 0080f553             fadd.s f10, f1, f8 rm=7
+  160: 00012407             flw f8, x2, 0
+  164: 00412487             flw f9, x2, 4
+  168: 00813403             ld x8, x2, 8
+  16c: 01013483             ld x9, x2, 16
+  170: 02010113             addi x2, x2, 32
+  174: 00008067             jalr x0, x1, 0
+
+0000000000000178 <sin>:
+  178: fe010113             addi x2, x2, -32
+  17c: 00913823             sd x2, x9, 16
+  180: 00813423             sd x2, x8, 8
+  184: 00912227             fsw x2, f9, 4
+  188: 00812027             fsw x2, f8, 0
+  18c: 00300413             addi x8, x0, 3
+  190: 00100493             addi x9, x0, 1
+  194: f00000d3             fmv.w.x f1, x0 rm=7
+  198: 00a0f453             fadd.s f8, f1, f10 rm=7
+  19c: fff50513             addi x10, x10, -1
+
+00000000000001a0 <sin_loop>:
+  1a0: 04a05c63             bge x0, x10, 88 <sin_ret>
+  1a4: fe010113             addi x2, x2, -32
+  1a8: 00a12827             fsw x2, f10, 16
+  1ac: 00a13423             sd x2, x10, 8
+  1b0: 00113023             sd x2, x1, 0
+  1b4: 00040533             add x10, x8, x0
+  1b8: e61ff0ef             jal x1, -416 <fact>
+  1bc: d02574d3             fcvt.s.l f9, x10 rm=7
+  1c0: 00040533             add x10, x8, x0
+  1c4: e71ff0ef             jal x1, -400 <pow>
+  1c8: 18957553             fdiv.s f10, f10, f9 rm=7
+  1cc: ffe4c493             xori x9, x9, -2
+  1d0: d004f053             fcvt.s.w f0, x9 rm=7
+  1d4: 10057553             fmul.s f10, f10, f0 rm=7
+  1d8: 00a47453             fadd.s f8, f8, f10 rm=7
+  1dc: 00013083             ld x1, x2, 0
+  1e0: 00813503             ld x10, x2, 8
+  1e4: 01012507             flw f10, x2, 16
+  1e8: 02010113             addi x2, x2, 32
+  1ec: fff50513             addi x10, x10, -1
+  1f0: 00240413             addi x8, x8, 2
+  1f4: fadff06f             jal x0, -84 <sin_loop>
+
+00000000000001f8 <sin_ret>:
+  1f8: f00000d3             fmv.w.x f1, x0 rm=7
+  1fc: 0080f553             fadd.s f10, f1, f8 rm=7
+  200: 00012407             flw f8, x2, 0
+  204: 00412487             flw f9, x2, 4
+  208: 00813403             ld x8, x2, 8
+  20c: 01013483             ld x9, x2, 16
+  210: 02010113             addi x2, x2, 32
+  214: 00008067             jalr x0, x1, 0
+
+0000000000000218 <ln>:
+  218: fe010113             addi x2, x2, -32
+  21c: 00913623             sd x2, x9, 12
+  220: 00813223             sd x2, x8, 4
+  224: 00812027             fsw x2, f8, 0
+  228: ffe00293             addi x5, x0, -2
+  22c: f00280d3             fmv.w.x f1, x5 rm=7
+  230: 00157553             fadd.s f10, f10, f1 rm=7
+  234: 00200413             addi x8, x0, 2
+  238: 00100493             addi x9, x0, 1
+  23c: f00000d3             fmv.w.x f1, x0 rm=7
+  240: 00a0f453             fadd.s f8, f1, f10 rm=7
+  244: fff50513             addi x10, x10, -1
+
+0000000000000248 <ln_loop>:
+  248: 04a05863             bge x0, x10, 80 <ln_ret>
+  24c: fe010113             addi x2, x2, -32
+  250: 00a12827             fsw x2, f10, 16
+  254: 00a13423             sd x2, x10, 8
+  258: 00113023             sd x2, x1, 0
+  25c: 00040533             add x10, x8, x0
+  260: dd5ff0ef             jal x1, -556 <pow>
+  264: d0047053             fcvt.s.w f0, x8 rm=7
+  268: 18057553             fdiv.s f10, f10, f0 rm=7
+  26c: ffe4c493             xori x9, x9, -2
+  270: d004f053             fcvt.s.w f0, x9 rm=7
+  274: 10057553             fmul.s f10, f10, f0 rm=7
+  278: 00a47453             fadd.s f8, f8, f10 rm=7
+  27c: 00013083             ld x1, x2, 0
+  280: 00813503             ld x10, x2, 8
+  284: 01012507             flw f10, x2, 16
+  288: 02010113             addi x2, x2, 32
+  28c: fff50513             addi x10, x10, -1
+  290: 00140413             addi x8, x8, 1
+  294: fb5ff06f             jal x0, -76 <ln_loop>
+
+0000000000000298 <ln_ret>:
+  298: f00000d3             fmv.w.x f1, x0 rm=7
+  29c: 0080f553             fadd.s f10, f1, f8 rm=7
+  2a0: 00012407             flw f8, x2, 0
+  2a4: 00413403             ld x8, x2, 4
+  2a8: 00c13483             ld x9, x2, 12
+  2ac: 02010113             addi x2, x2, 32
+  2b0: 00008067             jalr x0, x1, 0
