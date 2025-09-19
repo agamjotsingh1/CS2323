@@ -1,60 +1,18 @@
 .data
-.word 2, 1, 0x3f800000, 5, 0, 0x40000000, 8
+#.word 0b00111111000000000000000000000000, 5
+#.word 0b01000000011110001000001000101111, 7
+#.word 0b01000000011110001000001000101111, 13
+.word 0xffffffff, 32
+#.word 0b00111111001100110011001100110011, -1
 
 .text
 
 lui x3, 0x10000 
-lw s0, 0(x3) # Number of function values
-addi s1, x3, 4 # Mem Location for reading values
-addi s2, x3, 512 # Mem Location for storing values
-
-main:
-    bge x0, s0, exit # if s0 <= 0, exit
-
-    lw s3, 0(s1) # function code
-    flw fa0, 4(s1)
-    lw a0, 8(s1)
-
-    # Switch case, s3 := code
-    case1:
-        bne s3, x0, case2
-        jal x1, exp # code 0 for exp
-
-    case2:
-        addi s3, s3, -1
-        bne s3, x0, case3 
-        jal x1, sin # code 1 for sin
-    
-    case3:
-        addi s3, s3, -1
-        bne s3, x0, case4
-        jal x1, cos # code 2 for cos
-
-    case4:
-        addi s3, s3, -1
-        bne s3, x0, case5
-        jal x1, ln # code 3 for ln
-
-    case5:
-        addi s3, s3, -1
-        bne s3, x0, default
-        jal x1, reciprocal # code 4 for 1/x
-    
-    default:
-        # if any of the previous cases are satsfied then store
-        bge x0, s3, store
-        jal x1, nan_error # error, code not valid
-
-    store:
-        fsw fa0, 0(s2)
-    
-    addi s2, s2, 4
-    addi s1, s1, 12
-    addi s0, s0, -1
-    beq x0, x0, main
-
-exit:
-    jal x0, exit
+ld t0, 0(x3)
+fmv.w.x fa0, t0
+ld a0, 4(x3)
+jal x1, fact
+add x0, x0, x0
 
 # fact(a0)
 # INPUTS
@@ -99,7 +57,7 @@ pow:
 # exp(fa0, a0)
 # INPUTS
 # fa0 := input (FP32)
-# a0 := number of terms (INT32)
+# a0 := number of terms (INT64)
 # OUTPUTS
 # fa0 := exp(fa0) till a0 terms (FP32)
 exp:
@@ -172,7 +130,7 @@ exp:
 # cos(fa0, a0)
 # INPUTS
 # fa0 := input (FP32)
-# a0 := number of terms (INT32)
+# a0 := number of terms (INT64)
 # OUTPUTS
 # fa0 := cos(fa0) till a0 terms (FP32)
 cos:
@@ -258,7 +216,7 @@ cos:
 # sin(fa0, a0)
 # INPUTS
 # fa0 := input (FP32)
-# a0 := number of terms (INT32)
+# a0 := number of terms (INT64)
 # OUTPUTS
 # fa0 := sin(fa0) till a0 terms (FP32)
 sin:
@@ -349,7 +307,7 @@ sin:
 # ln(fa0, a0)
 # INPUTS
 # fa0 := input (FP32)
-# a0 := number of terms (INT32)
+# a0 := number of terms (INT64)
 # OUTPUTS
 # fa0 := ln(fa0) till a0 terms (FP32)
 ln:
@@ -443,7 +401,7 @@ ln:
 # reciprocal(fa0, a0)
 # INPUTS
 # fa0 := input (FP32)
-# a0 := number of terms (INT32)
+# a0 := number of terms (INT64)
 # OUTPUTS
 # fa0 := 1/(fa0) till a0 terms (FP32)
 reciprocal:
