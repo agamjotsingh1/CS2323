@@ -1,10 +1,16 @@
 .data
-.word 2, 1, 0x3f800000, 5, 0, 0x40000000, 8
+
+.word 5
+.word 4, 0x3f800000, 0
+.word 4, 0x3f000000, -1
+.word 4, 0x00000000, 10
+.word 4, 0xbf800000, 10
+.word 4, 0x40400000, 30
 
 .text
 
 lui x3, 0x10000 
-lw s0, 0(x3) # Number of function values
+lw s0, 0(x3) # Number of inputs
 addi s1, x3, 4 # Mem Location for reading values
 addi s2, x3, 512 # Mem Location for storing values
 
@@ -12,8 +18,8 @@ main:
     bge x0, s0, exit # if s0 <= 0, exit
 
     lw s3, 0(s1) # function code
-    flw fa0, 4(s1)
-    lw a0, 8(s1)
+    flw fa0, 4(s1) # function input (x)
+    lw a0, 8(s1) # number of terms
 
     # Switch case, s3 := code
     case1:
@@ -41,7 +47,8 @@ main:
         jal x1, reciprocal # code 4 for 1/x
     
     default:
-        # if any of the previous cases are satsfied then store
+        # 'if any of the previous cases
+        # are satsfied then store
         bge x0, s3, store
         jal x1, nan_error # error, code not valid
 
@@ -80,7 +87,7 @@ fact:
 # fa0 := base (FP32)
 # a0 := exponent (INT64)
 # OUTPUTS
-# fa0 := pow(fa0, a0) (FP32)
+# fa0 := fa0 ^ a0 (FP32)
 pow:
     li t0, 1
     fcvt.s.l ft0, t0 # init to 1 (in float)
@@ -103,21 +110,20 @@ pow:
 # OUTPUTS
 # fa0 := exp(fa0) till a0 terms (FP32)
 exp:
+    # --- ERROR HANDLING ---
     bge x0, a0, nan_error # no of terms <= 0 then error
-    # save saved registers (s0, fs0, fs1, fs2)
 
-    # PLEASE NOTE THIS IS NOT CONFIRMED
-    # NOTE := Although we only need 16 bytes of stack
-    # and the stack should be 16 bit aligned
-    # the stack pointer should leave space for a red zone?
-    # So, we subtract it with 32
+    # --- SAVING SAVED REGISTERS ---
+    # saved registers used := s0, fs0, fs1
+    # sp is pulled down by 32 bits as 
+    # stack is aligned by 16 bits by default
     addi sp, sp, -32
     sd s0, 8(sp)
     fsw fs1, 4(sp)
     fsw fs0, 0(sp)
 
     li s0, 1 # upward counter for 'n' in taylor series
-    fcvt.s.l fs0, s0 # fs0 := result
+    fcvt.s.l fs0, s0 # fs0 := result (first term = 1)
 
     # decrease a0 by 1 as we already considered first term
     addi a0, a0, -1 
@@ -125,28 +131,32 @@ exp:
     exp_loop:
         bge x0, a0, exp_ret
 
-        # saving registers (fa0, a0, x1)
+        # --- SAVING ARGUMENT REGISTERS ---
+        # argument registers := fa0, a0
+        # return address := x1
         addi sp, sp, -32
         fsw fa0, 16(sp)
         sd a0, 8(sp)
         sd x1, 0(sp)
 
-        # Calculating fact(s0)
+        # --- CALCULATING FACTORIAL ---
         # a0 = s0
         # Stored in a0
         mv a0, s0
         jal x1, fact
         fcvt.s.l fs1, a0 # fs1 contains factorial
 
-        # Calculating pow(fa0, s0)
+
+        # --- CALCULATING POWER ---
         # Stored in fa0
         mv a0, s0
         # Input is already in fa0
         jal x1, pow
         fdiv.s fa0, fa0, fs1
-        fadd.s fs0, fs0, fa0
 
-        # loading back registers (fa0, a0, x1)
+        fadd.s fs0, fs0, fa0 # Adding term to result
+
+        # --- LOADING BACK ARGUMENT REGISTERS ---
         ld x1, 0(sp)
         ld a0, 8(sp)
         flw fa0, 16(sp)
@@ -160,12 +170,11 @@ exp:
         fmv.w.x ft1, x0
         fadd.s fa0, ft1, fs0 # move fs0 to fa0 by adding zero
 
-        # load back the saved registers
+        # --- LOADING BACK SAVED REGISTERS ---
         flw fs0, 0(sp)
         flw fs1, 4(sp)
         ld s0, 8(sp)
         addi sp, sp, 32
-
         ret
 
     
@@ -176,21 +185,23 @@ exp:
 # OUTPUTS
 # fa0 := cos(fa0) till a0 terms (FP32)
 cos:
+    # --- ERROR HANDLING ---
     bge x0, a0, nan_error # no of terms <= 0 then error
 
-    # save saved registers (s0, s1, fs0, fs1)
-    # NOTE := Although we only need 24 bytes of stack
-    # memory, the stack pointer should be 16 bit aligned
-    # So, we subtract it with 32
+
+    # --- SAVING SAVED REGISTERS ---
+    # saved registers used := s0, s1, fs0, fs1
+    # sp is pulled down by 32 bits as 
+    # stack is aligned by 16 bits by default
     addi sp, sp, -32
     sd s1, 16(sp)
     sd s0, 8(sp)
     fsw fs1, 4(sp)
     fsw fs0, 0(sp)
 
-    # cosine starts with index 2
-    # after the first term = 1
-    li s0, 2 # upward counter for 'n' in taylor series
+    # starts with 2 as first term is already considered
+    li s0, 2 # upward counter for '2*n' in taylor series
+
     # cosine has alternating -1 and 1
     # it is just convenient to have a register for it
     li s1, 1 
@@ -202,21 +213,24 @@ cos:
     cos_loop:
         bge x0, a0, cos_ret
 
-        # saving registers (fa0, a0, x1)
+        # --- SAVING ARGUMENT REGISTERS ---
+        # argument registers := fa0, a0
+        # return address := x1
         addi sp, sp, -32
         fsw fa0, 16(sp)
         sd a0, 8(sp)
         sd x1, 0(sp)
 
-        # Calculating fact(s0)
+        # --- CALCULATING FACTORIAL ---
         # a0 = s0
-        # Stored in a0
+        # fact(s0) stored in a0
         mv a0, s0
         jal x1, fact
         fcvt.s.l fs1, a0 # fs1 contains factorial
 
-        # Calculating pow(fa0, s0)
-        # Stored in fa0
+
+        # --- CALCULATING POWER ---
+        # pow(fa0, s0) stored in fa0
         mv a0, s0
         # Input is already in fa0
         jal x1, pow
@@ -230,7 +244,7 @@ cos:
         fmul.s fa0, fa0, ft0
         fadd.s fs0, fs0, fa0
 
-        # loading back registers (fa0, a0, x1)
+        # --- LOADING BACK ARGUMENT REGISTERS ---
         ld x1, 0(sp)
         ld a0, 8(sp)
         flw fa0, 16(sp)
@@ -246,7 +260,7 @@ cos:
         fmv.w.x ft1, x0
         fadd.s fa0, ft1, fs0 # move fs0 to fa0 by adding zero
 
-        # load back the saved registers
+        # --- LOADING BACK SAVED REGISTERS ---
         flw fs0, 0(sp)
         flw fs1, 4(sp)
         ld s0, 8(sp)
@@ -262,26 +276,26 @@ cos:
 # OUTPUTS
 # fa0 := sin(fa0) till a0 terms (FP32)
 sin:
+    # --- ERROR HANDLING ---
     bge x0, a0, nan_error # no of terms <= 0 then error
 
-    # save saved registers (s0, s1, fs0, fs1)
-    # NOTE := Although we only need 24 bytes of stack
-    # memory, the stack pointer should be 16 bit aligned
-    # So, we subtract it with 32
+    # --- SAVING SAVED REGISTERS ---
+    # saved registers used := s0, s1, fs0, fs1
+    # sp is pulled down by 32 bits as 
+    # stack is aligned by 16 bits by default
     addi sp, sp, -32
     sd s1, 16(sp)
     sd s0, 8(sp)
     fsw fs1, 4(sp)
     fsw fs0, 0(sp)
 
-    # sine starts with power 1
-    # but second term starts with power 3
-    # as we are already considering first term
-    # for initiliazation, s0 starts with 3
-    li s0, 3 # upward counter for 'n' in taylor series
+    # starts from 3 as first term is considered already
+    li s0, 3 # upward counter for '2*n + 1' in taylor series
+
     # sine has alternating -1 and 1
     # it is just convenient to have a register for it
     li s1, 1 
+
     # fs0 := result (first term = <input> or x)
     fmv.w.x ft1, x0
     fadd.s fs0, ft1, fa0 # move fa0 to fs0 by adding zero
@@ -292,21 +306,23 @@ sin:
     sin_loop:
         bge x0, a0, sin_ret
 
-        # saving registers (fa0, a0, x1)
+        # --- SAVING ARGUMENT REGISTERS ---
+        # argument registers := fa0, a0
+        # return address := x1
         addi sp, sp, -32
         fsw fa0, 16(sp)
         sd a0, 8(sp)
         sd x1, 0(sp)
 
-        # Calculating fact(s0)
+        # --- CALCULATING FACTORIAL ---
         # a0 = s0
-        # Stored in a0
+        # fact(s0) stored in a0
         mv a0, s0
         jal x1, fact
-        fcvt.s.l fs1, a0 # fs1 contains factorial
+        fcvt.s.l fs1, a0 # fs1 contains factorial (in float)
 
-        # Calculating pow(fa0, s0)
-        # Stored in fa0
+        # --- CALCULATING POWER ---
+        # pow(fa0, s0) stored in fa0
         mv a0, s0
         # Input is already in fa0
         jal x1, pow
@@ -317,10 +333,10 @@ sin:
         # xor with -2 makes it switch from 1 to -1 and -1 to 1
         xori s1, s1, -2
         fcvt.s.w ft0, s1
-        fmul.s fa0, fa0, ft0
-        fadd.s fs0, fs0, fa0
+        fmul.s fa0, fa0, ft0 # multiplying by sign term
+        fadd.s fs0, fs0, fa0 # adding the term to result
 
-        # loading back registers (fa0, a0, x1)
+        # --- LOADING BACK ARGUMENT REGISTERS ---
         ld x1, 0(sp)
         ld a0, 8(sp)
         flw fa0, 16(sp)
@@ -337,7 +353,7 @@ sin:
         fmv.w.x ft1, x0
         fadd.s fa0, ft1, fs0 # move fs0 to fa0 by adding zero
 
-        # load back the saved registers
+        # --- LOADING BACK SAVED REGISTERS ---
         flw fs0, 0(sp)
         flw fs1, 4(sp)
         ld s0, 8(sp)
@@ -353,15 +369,16 @@ sin:
 # OUTPUTS
 # fa0 := ln(fa0) till a0 terms (FP32)
 ln:
+    # --- ERROR HANDLING ---
     bge x0, a0, nan_error # no of terms <= 0 then error
     fcvt.s.w ft0, x0
     fle.s t0, fa0, ft0 # domain of input is > 0
     bne t0, x0, nan_error
 
-    # save saved registers (s0, s1, fs0, fs1)
-    # NOTE := Although we only need 20 bytes of stack
-    # memory, the stack pointer should be 16 bit aligned
-    # So, we subtract it with 32
+    # --- SAVING SAVED REGISTERS ---
+    # saved registers used := s0, s1, fs0, fs1
+    # sp is pulled down by 32 bits as 
+    # stack is aligned by 16 bits by default
     addi sp, sp, -32
     sd s1, 12(sp)
     sd s0, 4(sp)
@@ -373,14 +390,13 @@ ln:
     fcvt.s.w ft1, t0 # ft1 contains -1
     fadd.s fa0, fa0, ft1
 
-    # ln starts with power 1
-    # but second term starts with power 2
-    # as we are already considering first term
-    # for initiliazation, s0 starts with 2
+    # starts with 2 as first term is already considered
     li s0, 2 # upward counter for 'n' in taylor series
+
     # ln has alternating -1 and 1
     # it is just convenient to have a register for it
     li s1, 1 
+
     # fs0 := result (first term = <input> or x)
     fmv.w.x ft1, x0
     fadd.s fs0, ft1, fa0 # move fa0 to fs0 by adding zero
@@ -391,14 +407,15 @@ ln:
     ln_loop:
         bge x0, a0, ln_ret
 
-        # saving registers (fa0, a0, x1)
+        
         addi sp, sp, -32
         fsw fa0, 16(sp)
         sd a0, 8(sp)
         sd x1, 0(sp)
 
-        # Calculating pow(fa0, s0)
-        # Stored in fa0
+        # --- SAVING ARGUMENT REGISTERS ---
+        # argument registers := fa0, a0
+        # return address := x1
         mv a0, s0
         # Input is already in fa0
         jal x1, pow
@@ -415,7 +432,7 @@ ln:
         fmul.s fa0, fa0, ft0
         fadd.s fs0, fs0, fa0
 
-        # loading back registers (fa0, a0, x1)
+        # --- LOADING BACK ARGUMENT REGISTERS ---
         ld x1, 0(sp)
         ld a0, 8(sp)
         flw fa0, 16(sp)
@@ -432,7 +449,7 @@ ln:
         fmv.w.x ft1, x0
         fadd.s fa0, ft1, fs0 # move fs0 to fa0 by adding zero
 
-        # load back the saved registers
+        # --- LOADING BACK SAVED REGISTERS ---
         flw fs0, 0(sp)
         ld s0, 4(sp)
         ld s1, 12(sp)
@@ -447,15 +464,16 @@ ln:
 # OUTPUTS
 # fa0 := 1/(fa0) till a0 terms (FP32)
 reciprocal:
+    # --- ERROR HANDLING ---
     bge x0, a0, nan_error # no of terms <= 0 then error
     fcvt.s.w ft0, x0
     feq.s t0, fa0, ft0 # domain of input is R - {0}
     bne t0, x0, nan_error
 
-    # save saved registers (s0, fs0)
-    # NOTE := Although we only need 12 bytes of stack
-    # memory, the stack pointer should be 16 byte memory aligned
-    # So, we subtract it with 16
+    # --- SAVING SAVED REGISTERS ---
+    # saved registers used := s0, s1, fs0, fs1
+    # sp is pulled down by 32 bits as 
+    # stack is aligned by 16 bits by default
     addi sp, sp, -16
     sd s0, 4(sp)
     fsw fs0, 0(sp)
@@ -476,7 +494,9 @@ reciprocal:
     reciprocal_loop:
         bge x0, a0, reciprocal_ret
 
-        # saving registers (fa0, a0, x1)
+        # --- SAVING ARGUMENT REGISTERS ---
+        # argument registers := fa0, a0
+        # return address := x1
         addi sp, sp, -32
         fsw fa0, 16(sp)
         sd a0, 8(sp)
@@ -489,7 +509,7 @@ reciprocal:
         jal x1, pow
         fadd.s fs0, fs0, fa0
 
-        # loading back registers (fa0, a0, x1)
+        # --- LOADING BACK ARGUMENT REGISTERS ---
         ld x1, 0(sp)
         ld a0, 8(sp)
         flw fa0, 16(sp)
@@ -503,13 +523,14 @@ reciprocal:
         fmv.w.x ft1, x0
         fadd.s fa0, ft1, fs0 # move fs0 to fa0 by adding zero
 
-        # load back the saved registers
+        # --- LOADING BACK SAVED REGISTERS ---
         flw fs0, 0(sp)
         ld s0, 4(sp)
         addi sp, sp, 16
 
         ret
 
+# returns NaN
 nan_error:
     li t0, -1 # 0xffffffff = Nan in floating point
     fmv.w.x fa0, t0
